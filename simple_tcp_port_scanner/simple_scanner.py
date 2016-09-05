@@ -31,7 +31,7 @@ if __name__ == "__main__":
 
 	#Loop through the hosts
 	for host in hosts:
-		print G + '[+] INFO: Scanning host {}'.format(host)
+		print G + '[+] INFO: Scanning host {}'.format(host) + W
 		#Loop through the ports
 		for port in ports:
 			try:
