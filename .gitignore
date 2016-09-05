@@ -1,0 +1,4 @@
+#Exclude pyc
+*.pyc
+
+#Exclude vim swap and temporal files
