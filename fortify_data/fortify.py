@@ -3,13 +3,14 @@
 #WARNING: Needs Crypto
 
 from Crypto.Cipher import AES
+from Crypto import Random
+import struct
 import hashlib
-import random
+#mport random
 import sys
 import os
 import argparse
 import getpass
-
 
 def file_exists(file_or_dir_name):
 	"""Checks file exists in path"""
@@ -36,15 +37,17 @@ def gen_key_from_password(password):
 		sys.exit(11)
 	return key
 
-def encrypt(file_name, password, chunksize=64*1024):
+def encrypt(file_name, out_file_name=None, password, chunksize=64*1024):
 	"""Encrypts a file generating a key from a password"""
-	iv = ''.join(chr(random.randint(0, 0xFF)) for i in range(16))
+    iv_size = 16
+	iv = Random.new().read(iv_size)
+    #iv = ''.join(chr(random.randint(0, 0xFF)) for i in range(16))
 	key = gen_key_from_password(password)
     encryptor = AES.new(key, AES.MODE_CBC, iv)
     filesize = os.path.getsize(file_name)
 
     with open(file_name, 'rb') as infile:
-        with open(out_filename, 'wb') as outfile:
+        with open(out_file_name, 'wb') as outfile:
             outfile.write(struct.pack('<Q', filesize))
             outfile.write(iv)
 
@@ -56,13 +59,26 @@ def encrypt(file_name, password, chunksize=64*1024):
                     chunk += ' ' * (16 - len(chunk) % 16)
 
                 outfile.write(encryptor.encrypt(chunk))
-	
 
+def decrypt(enc_file_name, out_file_name=None, password, chunksize=24*1024):
+    """ Decrypts a file using a key from a password"""
+    if not out_filename:
+        print '[!] WARN: No name for the decrypted file provided, reanming to {}_decrypt'.format(enc_file_name)
+        out_file_name = enc_file_name + '_decrypt'
 
-def decrypt(path, password):
-	"""Decrypts a file"""
+    with open(enc_file_name, 'rb') as infile:
+        origsize = struct.unpack('<Q', infile.read(struct.calcsize('Q')))[0]
+        iv = infile.read(16)
+        decryptor = AES.new(key, AES.MODE_CBC, iv)
 
+        with open(out_file_name, 'wb') as outfile:
+            while True:
+                chunk = infile.read(chunksize)
+                if len(chunk) == 0:
+                    break
+                outfile.write(decryptor.decrypt(chunk))
 
+            outfile.truncate(origsize)
 
 # Console colors
 W = '\033[0m'  # white (normal)
@@ -74,14 +90,22 @@ B = '\033[34m' # blue
 help_message = ("USAGE:\n" +
                 "The fortify.py script encrypts and decrypts a file or directory\n" +
 				"Example :\n" +
-				"fortify.py -e <path2file>  -p <password>") 
+				"To encrypt: fortify.py -e <path2file> -p <password>\n" + 
+                "To decrypt: fortify.py -d <path2file> -p <password>")
 parser = argparse.ArgumentParser(usage=help_message, description='Encrypt/decrypt a file or dir')
-parser.add_argument('-e', help='Path to the file or directory', default=False)
-parser.add_argument('-p', help='Password of the encrypt/decrypt', default=False)
+parser.add_argument('-e', help='encrypt option', default=False)
+parser.add_argument('-d', help='decrypt option', default=False)
+parser.add_argument('-p', help='password for encrypt/decrypt', default=False)
 args = parser.parse_args()
 
 
 if __name__ == "__main__":
+    
+    #Ensure only one is selected
+    if args.e and args.d:
+        print R + "[-] ERROR: Please slect if you want to encrypt or decrypt, use -h for help"
+        sys.exit(1)
+
 
 	hosts = set(args.t)
 	ports = set(args.p)
