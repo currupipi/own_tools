@@ -1,18 +1,19 @@
 #! /usr/bin/env bash
 #Script to encriypt decrypt files or directories
 
-#Ceck directory exists 
-function check_files {
-	
+
+function encrypt_checks {
+
 	directory=$1
 	tarfile=$1.tar.gz
 	hidden=".$tarfile"
 	encrypted=$hidden.gpg
 
-#	if [ ! -d "$directory" ]; then
-#		echo -e  "\t$directory is not a directory on the filesystem"
-#		exit 10
-
+	if [ ! -d "$directory" ]; then
+		echo -e  "\t$directory is not a directory on the filesystem"
+		exit 10
+	fi
+	
 	if [ -f "$tarfile" ]; then
 		echo -e "\t$tarfile tar file exists for that directory already"
 		echo -e "\tconsider to fix that issue manually"
@@ -24,40 +25,82 @@ function check_files {
 		exit 12
 
 	elif [ -e "$encrypted" ]; then
-		echo -e "\t[!]WARNING: There is an encrypted file already for that file/directory called $encrypted"
+		echo -e "\t[!]WARNING: There is an existing encrypted file for $directory called $encrypted"
 		echo -e "\t At this point you can:"
-		echo -e "\t * DELETE the current encrypted file $encrypted if you are confident the content is obsolete (a backup will be done)"
-		echo -e "\t * DECRYPT $encrypted to $directory (a backup will be done if needed)"
-		echo -e "\t * QUIT to exit"
+		echo -e "\t * ENCRYPT the current content of $directory and generate a new $encrypted( backup old $encrypted)"
+		echo -e "\t * Exit to review it manually"
+
 		while true; do
-			read -p "Type 'delete', 'decrypt' or 'quit': >> " choice
+			read -p "Type 'e' to encrypt $directory or 'q' to quit: >> " choice
+			
 			case $choice in
-			'delete')
-				cp $encrypted ${encrypted}_$(date -I).backup
+			'e')
+				mv $encrypted ${encrypted}_$(date -I).backup
 				if [ $? -ne 0 ]; then
-					echo "Can not ensure backup of $encrypted before deleting it"
+					echo "Could not  backup $encrypted before encrypting"
 					exit 13
 				fi
-				rm $encrypted; exit;; 
-			'decrypt')
-				if [ -e $directory ]; then
-					echo -e "\t[+]INFO: Backing up old $directory befor decrypting $encrypted"
-					cp -R $directory ${directory}_$(date -I).backup
-					if [ $? -ne 0 ]; then
-						echo -e "\t[-]ERROR: Can not ensure backup of $directory before deleting it"
-						exit 14
-					fi
-				fi
-				decrypt $directory; exit;;
+				encrypt $directory; exit;; 
 			'quit') 
 				echo "Good bye! :-) "; exit;;
 			*)
-				echo "Please type in 'delete' or 'decrypt' or 'quit' : ";;
+				echo "Please type in 'e' tp encrypt $directory or 'q' to quit : ";;
 			esac
 		done
 	fi
+	encrypt $directory
+}
 
-	return 0
+
+function decrypt_checks {
+
+	directory=$1
+	tarfile=$1.tar.gz
+	hidden=".$tarfile"
+	encrypted=$hidden.gpg
+
+	if [ ! -e "$encrypted" ]; then
+		echo -e "\t[-]ERROR: Ther is no $encrypted file for $directory"
+		echo -e "\t Please review file exists or path is correct"
+		exit 20
+	fi
+	
+	if [ -f "$tarfile" ]; then
+		echo -e "\t$tarfile tar file exists for that directory already"
+		echo -e "\tconsider to fix that issue manually"
+		exit 11
+
+	elif [ -f "$hidden" ]; then
+		echo -e "\t$hidden hidden tar file exists already"
+		echo -e "\tconsider to fix that issue manually"
+		exit 12
+
+	elif [ -d "$directory" ]; then
+		echo -e "\t[!]WARNING: $directory  file/directory decrypted version already exists"
+		echo -e "\t At this point you can:"
+		echo -e "\t * Overwrite $directory content with the latest $encrypted version (previously backup) "
+		echo -e "\t * QUIT to exit"
+
+		while true; do
+			read -p "Type 'd' to decrypt $encrypted and overwrite $directory or 'q' to quit: >> " choice
+			
+			case $choice in
+			'd')
+				mv $directory ${directory}_$(date -I).backup
+				if [ $? -ne 0 ]; then
+					echo "Could not  backup $directory before decrypting $encrypted"
+					exit 21
+				fi
+				decrypt $directory; exit;; 
+			'quit') 
+				echo "Good bye! :-) "; exit;;
+			*)
+				echo "Please type 'd' to decrypt $encrypted and overwrite $directory or 'q' to quit : ";;
+			esac
+		done
+	
+	fi
+	decrypt $directory
 }
 
 function encrypt {
@@ -147,15 +190,15 @@ function decrypt {
 
 echo "Enter full path of the directory: "
 read directory
-check_files $directory
+#check_files $directory
 
 while true; do
-	read -p "Do you want to Encrypt [type 'e'] or decryt [type 'd']?: >> " choice
+	read -p "Do you want to Encrypt [type 'e'] or decryt $directory [type 'd']?: >> " choice
 	case $choice in
 		e|E)
-			encrypt $directory; break;;
+			encrypt_checks $directory; break;;
 		d|D) 
-			decrypt $directory; break;;
+			decrypt_checks $directory; break;;
 		*)
 			echo "Please answer 'e' or 'd'";;
 	esac
